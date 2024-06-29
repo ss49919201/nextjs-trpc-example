@@ -9,10 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.606.0",
     "@trpc/client": "^10.45.2",
     "@trpc/next": "^10.45.2",
     "@trpc/server": "^10.45.0",
     "next": "14.0.3",
+    "next-auth": "^4.24.7",
     "react": "^18",
     "react-dom": "^18",
     "zod": "^3.22.4"
