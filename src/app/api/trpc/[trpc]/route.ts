@@ -34,7 +34,29 @@ const t = initTRPC.create({
   },
 });
 const router = t.router;
-const publicProcedure = t.procedure;
+
+const errorLogMiddleware = t.middleware(async (opts) => {
+  const result = await opts.next();
+
+  const newLineToSpace = (str: string) => str.replace(/\n/g, " ");
+
+  if (!result.ok) {
+    console.log(
+      "Error:",
+      `message: ${newLineToSpace(result.error.message)}`,
+      `code: ${newLineToSpace(result.error.code)}`,
+      `name: ${newLineToSpace(result.error.name)}`,
+      `stack: ${result.error.stack ? newLineToSpace(result.error.stack) : ""}`,
+      `cause: ${
+        result.error.cause ? newLineToSpace(result.error.cause.message) : ""
+      }`
+    );
+  }
+
+  return result;
+});
+
+const publicProcedure = t.procedure.use(errorLogMiddleware);
 
 export const appRouter = router({
   greeting1: publicProcedure
