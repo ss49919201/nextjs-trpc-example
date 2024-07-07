@@ -1,14 +1,38 @@
-import {
-  initTRPC,
-  MiddlewareBuilder,
-  MiddlewareFunction,
-  TRPCError,
-} from "@trpc/server";
+import { initTRPC } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 
-const t = initTRPC.create();
+const t = initTRPC.create({
+  errorFormatter(opts) {
+    const { shape, error } = opts;
 
+    let parsedMessage: string | undefined;
+    try {
+      parsedMessage = JSON.parse(error.message);
+    } catch {}
+
+    return {
+      ...shape,
+      data: {
+        ...shape.data,
+        parsedMessage,
+        validationInputError:
+          error.code === "BAD_REQUEST" && error.cause instanceof ZodError
+            ? {
+                rawMessage: error.cause.message,
+                parsedMessage: (() => {
+                  try {
+                    return JSON.parse(error.cause.message);
+                  } catch {
+                    return undefined;
+                  }
+                })(),
+              }
+            : null,
+      },
+    };
+  },
+});
 const router = t.router;
 const publicProcedure = t.procedure;
 
@@ -20,6 +44,7 @@ export const appRouter = router({
       })
     )
     .query((opts) => {
+      const s = z.string().parse(100);
       return { msg: opts.input.name! };
     }),
   greeting2: publicProcedure
