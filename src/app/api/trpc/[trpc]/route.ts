@@ -1,5 +1,6 @@
 import { initTRPC } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { randomBytes } from "crypto";
 import { z, ZodError } from "zod";
 
 const t = initTRPC.create({
@@ -56,7 +57,28 @@ const errorLogMiddleware = t.middleware(async (opts) => {
   return result;
 });
 
-const publicProcedure = t.procedure.use(errorLogMiddleware);
+const requestLogMiddleware = t.middleware(async (opts) => {
+  const requestId = randomBytes(8).toString("hex");
+  const start = Date.now();
+  const result = await opts.next();
+  const duration = Date.now() - start;
+  let parsedInput = "";
+  try {
+    parsedInput = JSON.stringify(opts.rawInput);
+  } catch (err) {
+    parsedInput = "Could not parse input";
+  }
+  const path = opts.path;
+  const type = opts.type;
+  console.log(
+    `Request ${requestId} ${type} ${path} ${parsedInput} took ${duration}ms`
+  );
+  return result;
+});
+
+const publicProcedure = t.procedure
+  .use(requestLogMiddleware)
+  .use(errorLogMiddleware);
 
 export const appRouter = router({
   greeting1: publicProcedure
