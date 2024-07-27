@@ -42,16 +42,31 @@ const errorLogMiddleware = t.middleware(async (opts) => {
   const newLineToSpace = (str: string) => str.replace(/\n/g, " ");
 
   if (!result.ok) {
-    console.log(
-      "Error:",
-      `message: ${newLineToSpace(result.error.message)}`,
-      `code: ${newLineToSpace(result.error.code)}`,
-      `name: ${newLineToSpace(result.error.name)}`,
-      `stack: ${result.error.stack ? newLineToSpace(result.error.stack) : ""}`,
-      `cause: ${
-        result.error.cause ? newLineToSpace(result.error.cause.message) : ""
-      }`
-    );
+    if (process.env.LOG_FORMAT !== "json") {
+      console.log(
+        "Error:",
+        `message: ${newLineToSpace(result.error.message)}`,
+        `code: ${newLineToSpace(result.error.code)}`,
+        `name: ${newLineToSpace(result.error.name)}`,
+        `stack: ${
+          result.error.stack ? newLineToSpace(result.error.stack) : ""
+        }`,
+        `cause: ${
+          result.error.cause ? newLineToSpace(result.error.cause.message) : ""
+        }`
+      );
+    } else {
+      console.log(
+        JSON.stringify({
+          type: "error",
+          message: result.error.message,
+          code: result.error.code,
+          name: result.error.name,
+          stack: result.error.stack ? result.error.stack : "",
+          cause: result.error.cause ? result.error.cause.message : "",
+        })
+      );
+    }
   }
 
   return result;
@@ -70,9 +85,23 @@ const requestLogMiddleware = t.middleware(async (opts) => {
   }
   const path = opts.path;
   const type = opts.type;
-  console.log(
-    `Request ${requestId} ${type} ${path} ${parsedInput} took ${duration}ms`
-  );
+  if (process.env.LOG_FORMAT !== "json") {
+    console.log(
+      `Request ${requestId} ${type} ${path} ${parsedInput} took ${duration}ms`
+    );
+  } else {
+    console.log(
+      JSON.stringify({
+        type: "request",
+        requestId,
+        path,
+        duration,
+        input: opts.rawInput,
+        output: result.ok ? result.data : result.error,
+      })
+    );
+  }
+
   return result;
 });
 
@@ -94,7 +123,6 @@ export const appRouter = router({
   greeting2: publicProcedure
     // Middleware
     .use(async (opts) => {
-      console.log(opts.rawInput);
       const result = await opts.next();
       return result;
     })
